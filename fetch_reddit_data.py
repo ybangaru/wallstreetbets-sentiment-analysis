@@ -70,7 +70,7 @@ def get_scores(all_comments):
     return scores
 
 def main():
-    # find #the last submission id from sql/any database and use the date from that for from_date
+    # find the last submission id from sql/any database and use the date from that for from_date
     # to date is always today
     from_date = int(time.mktime(time.strptime('2018-06-01', '%Y-%m-%d')))
     to_date = int(time.mktime(time.strptime('2020-12-31', '%Y-%m-%d'))) 
