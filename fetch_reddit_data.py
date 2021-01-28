@@ -6,10 +6,10 @@ import pandas as pd
 import os
 import praw
 import datetime
+from dateutil.relativedelta import *
 import boto3
 from botocore.exceptions import ClientError
 
-# from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 def get_submissions(from_date, to_date, sub, title_with):
     base_url = 'https://api.pushshift.io/reddit/search/submission/'
@@ -82,37 +82,39 @@ def main(sub):
     objects = s3_client.list_objects(Bucket='reddit-wallstreetbets')
 
     latest_obj = pd.DataFrame(objects['Contents']).sort_values(by='LastModified', ascending=True)['Key'].iloc[-1]
-    print(latest_obj)
 
-    resp = s3.select_object_content(
+    resp = s3_client.select_object_content(
         Bucket='reddit-wallstreetbets',
         Key=latest_obj,
         ExpressionType='SQL',
-        Expression="SELECT * FROM s3object s where s.\"Name\" = 'Jane'",
+        Expression='SELECT s."date" FROM S3Object s',
         InputSerialization = {'CSV': {"FileHeaderInfo": "Use"}, 'CompressionType': 'GZIP'},
         OutputSerialization = {'CSV': {}},
     )
 
+    for event in resp['Payload']:
+        if 'Records' in event:
+            from_date = sorted(event['Records']['Payload'].decode('utf-8').split('\n'))[-1]
 
-    # from_date = time.mktime(time.strptime('2018-03-01', '%Y-%m-%d'))
-    # to_date = time.mktime(time.strptime('2018-03-31', '%Y-%m-%d'))
+    to_date = datetime.datetime.strptime(from_date, '%Y-%m-%d %H:%M:%S') + relativedelta(months=+1)
+    to_date = time.mktime(time.strptime(str(to_date), '%Y-%m-%d %H:%M:%S'))
+    from_date = time.mktime(time.strptime(from_date,'%Y-%m-%d %H:%M:%S'))
 
-    # all_submissions = get_reddit_submissions(int(from_date), int(to_date), sub)
-    # all_comments = get_reddit_comments(all_submissions)
-    # all_submissions['comments'] = all_comments
-    # print(all_submissions['date'])
-    # temporal = datetime.datetime.now().strftime("%Y-%m-%d-%I:%M:%S-%p")
-    # filename = f'{sub}-{temporal}.csv.gz'
-    # all_submissions.to_csv(f'{os.getcwd()}/{filename}',  compression='gzip', index=False)
+    all_submissions = get_reddit_submissions(int(from_date), int(to_date), sub)
+    all_comments = get_reddit_comments(all_submissions)
+    all_submissions['comments'] = all_comments
+    temporal = datetime.datetime.now().strftime("%Y-%m-%d-%I:%M:%S-%p")
+    filename = f'{sub}-{temporal}.csv.gz'
+    all_submissions.to_csv(f'{os.getcwd()}/{filename}',  compression='gzip', index=False)
     
 
-    # if upload_file(s3_client, filename, 'reddit-wallstreetbets') is True:
-    #     print('Upload successful')
-    #     os.remove(f'{os.getcwd()}/{filename}')
-    # else:
-    #     print('S3 Uplaod failed')
+    if upload_file(s3_client, filename, 'reddit-wallstreetbets') is True:
+        print('Upload successful')
+        os.remove(f'{os.getcwd()}/{filename}')
+    else:
+        print('S3 Uplaod failed')
     
-    # # now append the all_submission along with their scores to the database again
+    # now append the all_submission along with their scores to the database again
 
 if __name__=='__main__':
     sub = "wallstreetbets"
