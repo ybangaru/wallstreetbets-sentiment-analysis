@@ -86,6 +86,8 @@ def main(sub):
     temporal = datetime.datetime.now().strftime("%Y-%m-%d-%I:%M:%S-%p")
     filename = f'{sub}-{temporal}.csv.gz'
     all_submissions.to_csv(f'{os.getcwd()}/{filename}',  compression='gzip', index=False)
+
+    
     # all_submissions.to_csv(f's3://buckets/reddit-wallstreetbets/{sub}-{temporal}.csv.gz', compression='gzip', index=False)
     # s3_resource = boto3.resource('s3')
     # s3_resource.Object(bucket, 'all_submissions.csv.gz').put(Body=csv_buffer.getvalue())
