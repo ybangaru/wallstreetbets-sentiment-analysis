@@ -94,11 +94,11 @@ def main(sub):
 
     for event in resp['Payload']:
         if 'Records' in event:
-            from_date = sorted(event['Records']['Payload'].decode('utf-8').split('\n'))[-1]
+            last_date = sorted(event['Records']['Payload'].decode('utf-8').split('\n'))[-1]
 
-    to_date = datetime.datetime.strptime(from_date, '%Y-%m-%d %H:%M:%S') + relativedelta(months=+1)
+    to_date = datetime.datetime.strptime(last_date, '%Y-%m-%d %H:%M:%S') + relativedelta(months=+1)
     to_date = time.mktime(time.strptime(str(to_date), '%Y-%m-%d %H:%M:%S'))
-    from_date = time.mktime(time.strptime(from_date,'%Y-%m-%d %H:%M:%S'))
+    from_date = time.mktime(time.strptime(last_date,'%Y-%m-%d %H:%M:%S'))
 
     all_submissions = get_reddit_submissions(int(from_date), int(to_date), sub)
     all_comments = get_reddit_comments(all_submissions)
@@ -109,7 +109,7 @@ def main(sub):
     
 
     if upload_file(s3_client, filename, 'reddit-wallstreetbets') is True:
-        print('Upload successful')
+        print(f'Upload successful beginning {last_date} for a month')
         os.remove(f'{os.getcwd()}/{filename}')
     else:
         print('S3 Uplaod failed')
