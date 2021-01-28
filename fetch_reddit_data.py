@@ -6,6 +6,8 @@ import pandas as pd
 import os
 import praw
 import datetime
+import boto3
+from botocore.exceptions import ClientError
 
 # from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
@@ -23,7 +25,7 @@ def get_reddit_submissions(from_date, to_date, sub):
 
     while len(all_submissions)>0:
         for submission in all_submissions:
-            subData = [submission['id'], submission['title'], submission['url'], datetime.datetime.fromtimestamp(submission['created_utc']).date()]
+            subData = [submission['id'], submission['title'], submission['url'], datetime.datetime.fromtimestamp(submission['created_utc'])]
             try:
                 flair = submission['link_flair_text']
             except KeyError:
@@ -57,13 +59,11 @@ def get_reddit_comments(all_submissions):
     return comments_by_day
 
 
-def upload_file(file_name, bucket, object_name=None):
-    # If S3 object_name was not specified, use file_name
+def upload_file(s3_client, file_name, bucket, object_name=None):
+
     if object_name is None:
         object_name = file_name
 
-    # Upload the file
-    s3_client = boto3.client('s3')
     try:
         response = s3_client.upload_file(file_name, bucket, object_name)
     except ClientError as e:
@@ -73,26 +73,46 @@ def upload_file(file_name, bucket, object_name=None):
 
 def main(sub):
 
-    # find the last submission id from sql/any database and use the date from that for from_date
-    # to date is always today
-    from_date = int(time.mktime(time.strptime('2018-01-01', '%Y-%m-%d')))
-    to_date = int(time.mktime(time.strptime('2018-01-31', '%Y-%m-%d'))) 
-    all_submissions = get_reddit_submissions(from_date, to_date, sub)
+    creds = pd.read_csv('yashaccess.csv')
+    AWS_S3_CREDS = {
+    "aws_access_key_id": creds.columns[0], # os.getenv("AWS_ACCESS_KEY")
+    "aws_secret_access_key":creds.columns[1] # os.getenv("AWS_SECRET_KEY")
+    }
+    s3_client = boto3.client('s3', **AWS_S3_CREDS)
+    objects = s3_client.list_objects(Bucket='reddit-wallstreetbets')
 
-    all_comments = get_reddit_comments(all_submissions)
-    all_submissions['comments'] = all_comments
+    latest_obj = pd.DataFrame(objects['Contents']).sort_values(by='LastModified', ascending=True)['Key'].iloc[-1]
+    print(latest_obj)
 
-    print(all_submissions)
-    temporal = datetime.datetime.now().strftime("%Y-%m-%d-%I:%M:%S-%p")
-    filename = f'{sub}-{temporal}.csv.gz'
-    all_submissions.to_csv(f'{os.getcwd()}/{filename}',  compression='gzip', index=False)
+    resp = s3.select_object_content(
+        Bucket='reddit-wallstreetbets',
+        Key=latest_obj,
+        ExpressionType='SQL',
+        Expression="SELECT * FROM s3object s where s.\"Name\" = 'Jane'",
+        InputSerialization = {'CSV': {"FileHeaderInfo": "Use"}, 'CompressionType': 'GZIP'},
+        OutputSerialization = {'CSV': {}},
+    )
 
+
+    # from_date = time.mktime(time.strptime('2018-03-01', '%Y-%m-%d'))
+    # to_date = time.mktime(time.strptime('2018-03-31', '%Y-%m-%d'))
+
+    # all_submissions = get_reddit_submissions(int(from_date), int(to_date), sub)
+    # all_comments = get_reddit_comments(all_submissions)
+    # all_submissions['comments'] = all_comments
+    # print(all_submissions['date'])
+    # temporal = datetime.datetime.now().strftime("%Y-%m-%d-%I:%M:%S-%p")
+    # filename = f'{sub}-{temporal}.csv.gz'
+    # all_submissions.to_csv(f'{os.getcwd()}/{filename}',  compression='gzip', index=False)
     
-    # all_submissions.to_csv(f's3://buckets/reddit-wallstreetbets/{sub}-{temporal}.csv.gz', compression='gzip', index=False)
-    # s3_resource = boto3.resource('s3')
-    # s3_resource.Object(bucket, 'all_submissions.csv.gz').put(Body=csv_buffer.getvalue())
 
-    # now append the all_submission along with their scores to the database again
+    # if upload_file(s3_client, filename, 'reddit-wallstreetbets') is True:
+    #     print('Upload successful')
+    #     os.remove(f'{os.getcwd()}/{filename}')
+    # else:
+    #     print('S3 Uplaod failed')
+    
+    # # now append the all_submission along with their scores to the database again
 
 if __name__=='__main__':
     sub = "wallstreetbets"
