@@ -5,8 +5,9 @@ import time
 import pandas as pd
 import os
 import praw
+import datetime
 
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+# from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 def get_submissions(from_date, to_date, sub, title_with):
     base_url = 'https://api.pushshift.io/reddit/search/submission/'
@@ -15,8 +16,7 @@ def get_submissions(from_date, to_date, sub, title_with):
     data = json.loads(data.text)
     return data['data']
 
-def get_reddit_submissions(from_date, to_date):
-    sub = "wallstreetbets"
+def get_reddit_submissions(from_date, to_date, sub):
     title_with = 'Daily Discussion Thread'
     subStats = []
     all_submissions = get_submissions(from_date, to_date, sub, title_with)
@@ -56,37 +56,42 @@ def get_reddit_comments(all_submissions):
         comments_by_day.append(comments)
     return comments_by_day
 
-def get_scores(all_comments):
-    scores=[]
-    for comments in all_comments:
-        sentiment_score=0
-        try:
-            for comment in comments:
-                sentiment_score=sentiment_score+analyser.polarity_scores(comment)['compound']
-        except TypeError:
-            sentiment_score=0
-        
-        scores.append(sentiment_score)
-    return scores
 
-def main():
+def upload_file(file_name, bucket, object_name=None):
+    # If S3 object_name was not specified, use file_name
+    if object_name is None:
+        object_name = file_name
+
+    # Upload the file
+    s3_client = boto3.client('s3')
+    try:
+        response = s3_client.upload_file(file_name, bucket, object_name)
+    except ClientError as e:
+        logging.error(e)
+        return False
+    return True
+
+def main(sub):
+
     # find the last submission id from sql/any database and use the date from that for from_date
     # to date is always today
-    from_date = int(time.mktime(time.strptime('2018-06-01', '%Y-%m-%d')))
-    to_date = int(time.mktime(time.strptime('2020-12-31', '%Y-%m-%d'))) 
-    # all_submissions = get_reddit_submissions(from_date, to_date)
+    from_date = int(time.mktime(time.strptime('2018-01-01', '%Y-%m-%d')))
+    to_date = int(time.mktime(time.strptime('2018-01-31', '%Y-%m-%d'))) 
+    all_submissions = get_reddit_submissions(from_date, to_date, sub)
 
-    columns = ['id', 'title', 'url', 'date', 'flair']
-    all_submissions = pd.read_csv(f'{os.getcwd()}/reddit_data.csv', names=columns)
-    all_submissions = all_submissions[:5][1:]
+    all_comments = get_reddit_comments(all_submissions)
+    all_submissions['comments'] = all_comments
 
-    # verify if any duplicates in all_submission by verifying with date and submission id
-    # drop those duplicates and call the following function
-    all_comments = get_reddit_comments(all_submissions[:5])
-    scores = get_scores(all_comments)
-    all_submissions['scores'] = scores
+    print(all_submissions)
+    temporal = datetime.datetime.now().strftime("%Y-%m-%d-%I:%M:%S-%p")
+    filename = f'{sub}-{temporal}.csv.gz'
+    all_submissions.to_csv(f'{os.getcwd()}/{filename}',  compression='gzip', index=False)
+    # all_submissions.to_csv(f's3://buckets/reddit-wallstreetbets/{sub}-{temporal}.csv.gz', compression='gzip', index=False)
+    # s3_resource = boto3.resource('s3')
+    # s3_resource.Object(bucket, 'all_submissions.csv.gz').put(Body=csv_buffer.getvalue())
 
     # now append the all_submission along with their scores to the database again
 
 if __name__=='__main__':
-    main()
+    sub = "wallstreetbets"
+    main(sub)
