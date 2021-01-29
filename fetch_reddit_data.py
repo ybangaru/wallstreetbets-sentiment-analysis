@@ -73,7 +73,7 @@ def upload_file(s3_client, file_name, bucket, object_name=None):
 
 def main(sub):
 
-    creds = pd.read_csv('yashaccess.csv')
+    creds = pd.read_csv(f'{os.getcwd()}/yashaccess.csv')
     AWS_S3_CREDS = {
     "aws_access_key_id": creds.columns[0], # os.getenv("AWS_ACCESS_KEY")
     "aws_secret_access_key":creds.columns[1] # os.getenv("AWS_SECRET_KEY")
@@ -95,10 +95,11 @@ def main(sub):
     for event in resp['Payload']:
         if 'Records' in event:
             last_date = sorted(event['Records']['Payload'].decode('utf-8').split('\n'))[-1]
-
-    to_date = datetime.datetime.strptime(last_date, '%Y-%m-%d %H:%M:%S') + relativedelta(months=+1)
-    to_date = time.mktime(time.strptime(str(to_date), '%Y-%m-%d %H:%M:%S'))
+    #to fetch historical data on a monthly basis
+    # to_date = datetime.datetime.strptime(last_date, '%Y-%m-%d %H:%M:%S') + relativedelta(months=+1)
+    # to_date = time.mktime(time.strptime(str(to_date), '%Y-%m-%d %H:%M:%S'))   
     from_date = time.mktime(time.strptime(last_date,'%Y-%m-%d %H:%M:%S'))
+    to_date = time.time()
 
     all_submissions = get_reddit_submissions(int(from_date), int(to_date), sub)
     all_comments = get_reddit_comments(all_submissions)
