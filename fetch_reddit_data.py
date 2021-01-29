@@ -115,8 +115,6 @@ def main(sub):
     else:
         print('S3 Uplaod failed')
     
-    # now append the all_submission along with their scores to the database again
-
 if __name__=='__main__':
     sub = "wallstreetbets"
     main(sub)
