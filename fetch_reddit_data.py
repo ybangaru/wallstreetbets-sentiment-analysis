@@ -95,6 +95,8 @@ def main(sub):
     for event in resp['Payload']:
         if 'Records' in event:
             last_date = sorted(event['Records']['Payload'].decode('utf-8').split('\n'))[-1]
+
+    # print(last_date)
     #to fetch historical data on a monthly basis
     # to_date = datetime.datetime.strptime(last_date, '%Y-%m-%d %H:%M:%S') + relativedelta(months=+1)
     # to_date = time.mktime(time.strptime(str(to_date), '%Y-%m-%d %H:%M:%S'))   
@@ -104,16 +106,20 @@ def main(sub):
     all_submissions = get_reddit_submissions(int(from_date), int(to_date), sub)
     all_comments = get_reddit_comments(all_submissions)
     all_submissions['comments'] = all_comments
-    temporal = datetime.datetime.now().strftime("%Y-%m-%d-%I:%M:%S-%p")
-    filename = f'{sub}-{temporal}.csv.gz'
-    all_submissions.to_csv(f'{os.getcwd()}/{filename}',  compression='gzip', index=False)
-    
 
-    if upload_file(s3_client, filename, 'reddit-wallstreetbets') is True:
-        print(f'Upload successful beginning {last_date} for a month')
-        os.remove(f'{os.getcwd()}/{filename}')
+    if all_submissions.empty:
+        print('No data Collected!')
     else:
-        print('S3 Uplaod failed')
+        temporal = datetime.datetime.now().strftime("%Y-%m-%d-%I:%M:%S-%p")
+        filename = f'{sub}-{temporal}.csv.gz'
+        all_submissions.to_csv(f'{os.getcwd()}/{filename}',  compression='gzip', index=False)
+        
+
+        if upload_file(s3_client, filename, 'reddit-wallstreetbets') is True:
+            print(f'Upload successful beginning {last_date} for a month')
+            os.remove(f'{os.getcwd()}/{filename}')
+        else:
+            print('S3 Upload failed')
     
 if __name__=='__main__':
     sub = "wallstreetbets"
