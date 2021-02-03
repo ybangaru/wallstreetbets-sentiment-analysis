@@ -17,6 +17,7 @@ def get_submissions(from_date, to_date, sub, title_with):
     data = requests.get(url)
     data = json.loads(data.text)
     return data['data']
+  
 
 def get_reddit_submissions(from_date, to_date, sub):
     title_with = 'Daily Discussion Thread'
@@ -42,7 +43,8 @@ def get_reddit_submissions(from_date, to_date, sub):
     return all_submissions
 
 def get_reddit_comments(all_submissions):
-    reddit = praw.Reddit(client_id = 'mteYn8e2rsWy2g', client_secret='ZqDp8o_bY1Vv445VcNp6tWsZCsKGCA', user_agent='nlp')
+    creds = pd.read_csv(f'{os.getcwd()}/yashaccess.csv')
+    reddit = praw.Reddit(client_id = creds.columns[2], client_secret=creds.columns[3], user_agent='nlp')
     comments_by_day = []
     for url in all_submissions['url']:
         try:
@@ -124,3 +126,4 @@ def main(sub):
 if __name__=='__main__':
     sub = "wallstreetbets"
     main(sub)
+
