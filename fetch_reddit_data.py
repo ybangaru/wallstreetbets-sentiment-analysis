@@ -1,14 +1,19 @@
+import os
+import time
+import json
 import requests
 import datetime
-import json
-import time
-import pandas as pd
-import os
-import praw
-import datetime
+import gzip
 from dateutil.relativedelta import *
+
+import pandas as pd
+import numpy as np
+import praw
 import boto3
 from botocore.exceptions import ClientError
+from sqlalchemy import create_engine, MetaData, Table, insert, delete
+
+
 
 
 def get_submissions(from_date, to_date, sub, title_with):
@@ -73,6 +78,69 @@ def upload_file(s3_client, file_name, bucket, object_name=None):
         return False
     return True
 
+def data_to_database():
+
+    csv_rows = []
+
+    creds = pd.read_csv(f'{os.getcwd()}/yashaccess.csv')
+    ENDPOINT="wallstreetbets-dd.c9f0d1vazbt9.us-west-2.rds.amazonaws.com"
+    PORT=creds.columns[5]
+    USR=creds.columns[6]
+    token = creds.columns[4]
+    REGION="us-west-2a"
+    DBNAME = creds.columns[6]
+    DATABASE_URI = f'postgresql+psycopg2://{USR}:{token}@{ENDPOINT}:{PORT}/{DBNAME}'
+
+    engine = create_engine(DATABASE_URI, echo=False)
+    connection = engine.connect()
+    # print(engine.table_names())
+    stmt = 'SELECT id FROM "daily-submissions-wsb"'
+    result_proxy = connection.execute(stmt)
+    results = result_proxy.fetchall()
+    ids_list = [ item[0] for item in results]
+    # print(ids_list)
+
+    metadata = MetaData()
+    daily_subs = Table('daily-submissions-wsb', metadata, autoload=True, autoload_with=engine)
+
+    AWS_S3_CREDS = {
+    "aws_access_key_id": creds.columns[0], # os.getenv("AWS_ACCESS_KEY")
+    "aws_secret_access_key":creds.columns[1] # os.getenv("AWS_SECRET_KEY")
+    }
+    bucket = 'reddit-wallstreetbets'
+    s3_client = boto3.client('s3', **AWS_S3_CREDS)
+    objects = s3_client.list_objects(Bucket=bucket)
+
+    latest_obj = pd.DataFrame(objects['Contents']).sort_values(by='LastModified', ascending=True)['Key'].iloc[-1]
+    latest_obj = s3_client.get_object(Bucket=bucket, Key=latest_obj)['Body']#Key=latest_obj['Key'])['Body']
+
+    with gzip.open(latest_obj, 'rt') as gf:
+        df = pd.read_csv(gf)
+
+        for index,row in df.iterrows():
+            if row["id"] in ids_list:
+                connection.execute(delete(daily_subs).where(daily_subs.columns.id==row["id"]))
+                # print(f"deleted a row with id {row['id']}")
+            try:
+                comments = row["comments"][1:-2]
+            except:
+                comments = np.nan
+            table_values={
+                'id'      : row["id"],
+                'title'   : row["title"],
+                'url'     : row["url"],
+                'datetime' : row["date"],
+                'flair'   : row["flair"],
+                'comments' : comments,
+                #    'when_created' : Column(DateTime, default=func.now())
+            }
+            csv_rows.append(table_values)
+
+    stmt = insert(daily_subs)
+    result_proxy = connection.execute(stmt, csv_rows)
+    # print(result_proxy.rowcount)
+    return True
+
 def main(sub):
 
     creds = pd.read_csv(f'{os.getcwd()}/yashaccess.csv')
@@ -118,8 +186,12 @@ def main(sub):
         
 
         if upload_file(s3_client, filename, 'reddit-wallstreetbets') is True:
-            print(f'Upload successful beginning {last_date} for a month')
+            print(f'Upload successful from {datetime.datetime.fromtimestamp(from_date)} till {datetime.datetime.fromtimestamp(to_date)}')
             os.remove(f'{os.getcwd()}/{filename}')
+            if data_to_database() is True:
+                print(f"Upload to Postgresql from {datetime.datetime.fromtimestamp(from_date)} till {datetime.datetime.fromtimestamp(to_date)} is successful!")
+            else:
+                print(f"upload to the postgresql database failed")
         else:
             print('S3 Upload failed')
     
