@@ -45,6 +45,7 @@ def get_reddit_submissions(from_date, to_date, sub):
     columns = ['id', 'title', 'url', 'date', 'flair']
     all_submissions = pd.DataFrame(subStats, columns=columns)
     # all_submissions.to_csv(f'{os.getcwd()}/reddit_data.csv')
+    # print(all_submissions)
     return all_submissions
 
 def get_reddit_comments(all_submissions):
@@ -176,7 +177,7 @@ def main(sub):
     all_submissions = get_reddit_submissions(int(from_date), int(to_date), sub)
     all_comments = get_reddit_comments(all_submissions)
     all_submissions['comments'] = all_comments
-
+    # print(all_submissions)
     if all_submissions.empty:
         print('No data Collected!')
     else:
