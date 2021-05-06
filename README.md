@@ -1,5 +1,5 @@
 # wallstreetbets-sentiment-analysis
-## The Project aims at collecting the daily posts from Reddit's r/wallstreetbets daily discussion thread and displaying some analytical results as an interactive dashboard.
+## The Project aims at collecting the posts from Reddit's r/wallstreetbets daily discussion thread and displaying some analytical results as an interactive dashboard.
 Link to the app: https://share.streamlit.io/ybangaru/wallstreetbets-sentiment-analysis/app.py
 
 About the data collection and the app:
