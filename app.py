@@ -25,7 +25,7 @@ from nltk import ngrams
 from collections import Counter
 
 def run_app():
-    @st.cache
+    # @st.cache
     def api_data():
         ENDPOINT = st.secrets["db_ENDPOINT"]
         PORT = 5432
