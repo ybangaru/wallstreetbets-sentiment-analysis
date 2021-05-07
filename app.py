@@ -24,7 +24,7 @@ from nltk import ngrams
 
 from collections import Counter
 
-st.cache()
+@st.cache
 def run_app():
 
     def api_data():
