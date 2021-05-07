@@ -13,7 +13,7 @@ A free-tire **AWS EC2 instance** is being used to collect data using **pushshift
 
 fetch_reddit_data.py is run on a daily basis by setting up a **cron job**. Use the "crontab -e" on the terminal and add, for example, the following line towards the end of the file to run the cronjob on your instance, don't forget to change the file locations accordingly and also make sure to create crontest.log using "touch crontest.log" on the terminal while in the project folder/anywhere else you prefer. Generally logs are not in the project folder.
 
-Eg: 0 5 * * *  /home/ubuntu/wallstreetbets-sentiment-analysis/runcron-env.py>> /home/ubuntu/wallstreetbets-sentiment-analysis/crontest.log 2>&1
+Eg: "0 5 * * *  /home/ubuntu/wallstreetbets-sentiment-analysis/runcron-env.py>> /home/ubuntu/wallstreetbets-sentiment-analysis/crontest.log 2>&1"
 Check out this cool website to experiment your cron schedule expressions https://crontab.guru/, mine is setup to run at 5AM everyday.
 
 database-wsb.py has some examples on how you could interact with postgres DB
