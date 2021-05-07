@@ -17,7 +17,9 @@ Eg: 0 5 * * *  /home/ubuntu/wallstreetbets-sentiment-analysis/runcron-env.py>> /
 Check out this cool website to experiment your cron schedule expressions https://crontab.guru/, mine is setup to run at 5AM everyday.
 
 database-wsb.py has some examples on how you could interact with postgres DB
+
 runcron-env.py is basically a simple bash script that run's the fetch_reddit_data.py file.
+
 test_data.csv, I also downloaded the data collected over the last few months into a csv file if someone would like to use it directly!
 
 
