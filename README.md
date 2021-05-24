@@ -3,9 +3,8 @@
 
 Preview:
 
-https://user-images.githubusercontent.com/45936015/117406536-d6132c00-af2a-11eb-8ffc-00f6de72f595.mp4
 
-
+https://user-images.githubusercontent.com/45936015/119408461-627f6600-bd03-11eb-9539-3a86de7a72e3.mp4
 Link to the app: https://share.streamlit.io/ybangaru/wallstreetbets-sentiment-analysis/app.py
 
 About the data collection and the app:
